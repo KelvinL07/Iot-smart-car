@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Dashboard</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>IoT Dashboard</h1>
+
+    <h2>Search Logs</h2>
+    <form action="/" method="GET">
+        <label for="search_id">Search by ID:</label>
+        <input type="text" id="search_id" name="search_id">
+        <button type="submit">Search</button>
+    </form>
+
+    <h2>Logs</h2>
+    <table>
+        <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+        </tr>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.timestamp }}</td>
+            <td>{{ log.ACTION }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Statistics</h2>
+    <table>
+        <tr>
+            <th>Statistic</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Mean Distance</td>
+            <td>{{ stats.mean_distance }}</td>
+        </tr>
+        <tr>
+            <td>Min Distance</td>
+            <td>{{ stats.min_distance }}</td>
+        </tr>
+        <tr>
+            <td>Max Distance</td>
+            <td>{{ stats.max_distance }}</td>
+        </tr>
+    </table>
+</body>
+</html>

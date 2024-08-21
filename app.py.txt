@@ -1,0 +1,40 @@
+from flask import Flask, render_template, request, redirect, url_for
+import mysql.connector
+from mysql.connector import Error
+
+app = Flask(__name__)
+
+def get_db_connection():
+    connection = mysql.connector.connect(
+        host='localhost',
+        database='RobotData',
+        user='newuser',
+        password='newpassword'
+    )
+    return connection
+
+@app.route('/')
+def index():
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    search_id = request.args.get('search_id')
+    
+    if search_id:
+        cursor.execute('SELECT * FROM logs WHERE id = %s ORDER BY timestamp DESC', (search_id,))
+    else:
+        cursor.execute('SELECT * FROM logs ORDER BY timestamp DESC LIMIT 10')
+        
+    logs = cursor.fetchall()
+    cursor.execute('''
+        SELECT AVG(distance) as mean_distance, 
+               MIN(distance) as min_distance, 
+               MAX(distance) as max_distance 
+        FROM readings
+    ''')
+    stats = cursor.fetchone()
+    cursor.close()
+    connection.close()
+    return render_template('index.html', logs=logs, stats=stats)
+
+if __name__ == '__main__':
+    app.run(debug=True)

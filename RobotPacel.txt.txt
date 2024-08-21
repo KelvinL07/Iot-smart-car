@@ -1,0 +1,147 @@
+#include <Servo.h>
+
+// Define pins for ultrasonic sensors
+const int startTrigPin = 8;
+const int startEchoPin = 7;
+
+// Define pin for PIR sensor
+const int pirPin = 5; // PIR sensor input pin
+
+// Define pins for servo motor and DC motor driver
+const int servoPin = 11;
+const int motorIn1 = 4;
+const int motorIn2 = 3;
+const int enablePin = 9; // Define the enable pin for the motor driver
+
+// Create servo object
+Servo frontServo;
+
+// Variables for sensor readings
+long startDuration;
+int startDistance;
+int pirState = LOW; // Initially no motion detected
+
+bool robotActive = false;
+unsigned long lastPirCheck = 0; // Store the last time PIR was checked
+const unsigned long pirInterval = 500; // Check PIR every 0.5 seconds
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(9600);
+
+  // Set up ultrasonic sensor pins
+  pinMode(startTrigPin, OUTPUT);
+  pinMode(startEchoPin, INPUT);
+
+  // Set up PIR sensor pin
+  pinMode(pirPin, INPUT);
+
+  // Set up motor driver pins
+  pinMode(motorIn1, OUTPUT);
+  pinMode(motorIn2, OUTPUT);
+  pinMode(enablePin, OUTPUT); // Initialize the enable pin
+
+  // Attach the servo to the defined pin
+  frontServo.attach(servoPin);
+
+  // Start the robot in sleep mode
+  stopMotor();
+  Serial.println("Robot is in Sleep Mode");
+}
+
+void loop() {
+  if (!checkUltrasonicSensor()) {
+    return;
+  }
+  if (robotActive) {
+    checkPIRSensorOnce();
+  }
+}
+
+bool checkUltrasonicSensor() {
+  // Check if the start-up ultrasonic sensor detects an object
+  digitalWrite(startTrigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(startTrigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(startTrigPin, LOW);
+  startDuration = pulseIn(startEchoPin, HIGH);
+  startDistance = startDuration * 0.034 / 2;
+
+  if (startDistance <= 3) {
+    if (!robotActive) {
+      robotActive = true;
+      Serial.println("Robot is ON");
+      moveForward();
+    }
+    return true;
+  } else {
+    if (robotActive) {
+      robotActive = false;
+      Serial.println("Robot is in Sleep Mode");
+      stopMotor();
+    }
+    return false;
+  }
+}
+
+void checkPIRSensorOnce() {
+  // Check the PIR sensor only once per loop iteration
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastPirCheck >= pirInterval) {
+    lastPirCheck = currentMillis;
+    pirState = digitalRead(pirPin);
+    Serial.print("PIR Sensor State: ");
+    Serial.println(pirState);
+
+    if (pirState == HIGH) {
+      // When PIR sensor detects something around the robot, turn the wheel
+      Serial.println("Object detected around the robot, turning wheel");
+      turnWheel();
+    }
+  }
+}
+
+void moveForward() {
+  if (!checkUltrasonicSensor()) return;
+  Serial.println("Moving Forward");
+  digitalWrite(motorIn1, HIGH);
+  digitalWrite(motorIn2, LOW);
+  analogWrite(enablePin, 255); // Enable motor with full speed
+}
+
+void stopMotor() {
+  Serial.println("Stopping Motor");
+  digitalWrite(motorIn1, LOW);
+  digitalWrite(motorIn2, LOW);
+  analogWrite(enablePin, 0); // Disable motor
+}
+
+void turnWheel() {
+  if (!checkUltrasonicSensor()) return;
+
+  // Stop the motor before turning
+  stopMotor();
+
+  // Turn the front wheel to avoid the obstacle
+  Serial.println("Turning Left");
+  frontServo.write(45); // Turn left
+  delay(500); // Adjust delay as needed
+
+  if (!checkUltrasonicSensor()) return;
+  stopMotor();
+
+  Serial.println("Turning Right");
+  frontServo.write(135); // Turn right
+  delay(500); // Adjust delay as needed
+
+  if (!checkUltrasonicSensor()) return;
+  stopMotor();
+
+  Serial.println("Straightening Front Wheel");
+  frontServo.write(90); // Straighten front wheel
+  delay(500); // Wait for 0.5 second
+
+  // Continue moving forward after turning the wheel
+  moveForward();
+}
